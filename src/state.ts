@@ -28,7 +28,9 @@ export let activations: {[key: string]: nn.ActivationFunction} = {
   "sigmoid": nn.Activations.SIGMOID,
   "swish": nn.Activations.SWISH,
   "gelu": nn.Activations.GELU,
-  "linear": nn.Activations.LINEAR
+  "linear": nn.Activations.LINEAR,
+  "sin": nn.Activations.SINE,
+  "sinc": nn.Activations.SINC,
 };
 
 /** A map between names and regularization functions. */
@@ -160,6 +162,8 @@ export class State {
     {name: "xTimesY", type: Type.BOOLEAN},
     {name: "xSquared", type: Type.BOOLEAN},
     {name: "ySquared", type: Type.BOOLEAN},
+    {name: "sinX", type: Type.BOOLEAN},
+    {name: "sinY", type: Type.BOOLEAN},
     {name: "collectStats", type: Type.BOOLEAN},
     {name: "tutorial", type: Type.STRING},
     {name: "problem", type: Type.OBJECT, keyMap: problems},
@@ -190,6 +194,8 @@ export class State {
   xTimesY = false;
   xSquared = false;
   ySquared = false;
+  sinX = false;
+  sinY = false;
   dataset: DatasetGenerator = new DatasetGenerator(dataset.classifyCircleData);
   regDataset: DatasetGenerator = new DatasetGenerator(dataset.regressPlane);
   seed: string;

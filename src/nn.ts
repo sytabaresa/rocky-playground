@@ -89,6 +89,10 @@ export class Node {
       return "X2";
     } else if (this.id == "xTimesY") {
       return "X1X2";
+    } else if (this.id == "sinX") {
+      return "sin_X1";
+    } else if (this.id == "sinY") {
+      return "sin_X2";
     } else if (this.id == "xSquared") {
       return "X1_squared";
     } else if (this.id == "ySquared") {
@@ -126,13 +130,13 @@ export interface RegularizationFunction {
 export class Errors {
   public static SQUARE: ErrorFunction = {
     error: (output: number, target: number) =>
-               0.5 * Math.pow(output - target, 2),
+      0.5 * Math.pow(output - target, 2),
     der: (output: number, target: number) => output - target
   };
 }
 
 /** Polyfill for TANH */
-(Math as any).tanh = (Math as any).tanh || function(x) {
+(Math as any).tanh = (Math as any).tanh || function (x) {
   if (x === Infinity) {
     return 1;
   } else if (x === -Infinity) {
@@ -192,15 +196,15 @@ export class Activations {
   };
   public static GELU: ActivationFunction = {
     output: x => {
-      let term1 = x + 0.044715 * x**3;
+      let term1 = x + 0.044715 * x ** 3;
       let term2 = 1 + (Math as any).tanh(Math.sqrt(2 / 3.14159265) * term1);
       return 0.5 * x * term2;
     },
     der: x => {
-      let term1 = 0.398942 * x + 0.0535161 * x**3;
-      let sech = 1 / (Math as any).cosh(0.797885 * x + 0.0356774 * x**3);
-      let term2 = 0.5 * (Math as any).tanh(0.797885 * x + 0.0356774 * x**3);
-      return 0.5 + term1 * sech**2 + term2;
+      let term1 = 0.398942 * x + 0.0535161 * x ** 3;
+      let sech = 1 / (Math as any).cosh(0.797885 * x + 0.0356774 * x ** 3);
+      let term2 = 0.5 * (Math as any).tanh(0.797885 * x + 0.0356774 * x ** 3);
+      return 0.5 + term1 * sech ** 2 + term2;
     },
     compileToPy: (input: string) => `${input} * GELU(${input})`
   };
@@ -208,6 +212,25 @@ export class Activations {
     output: x => x,
     der: x => 1,
     compileToPy: (input: string) => `${input}`
+  };
+  public static SINE: ActivationFunction = {
+    output: x => (Math as any).sin(x),
+    der: x => (Math as any).cos(x),
+    compileToPy: (input: string) => `math.sin(${input})`
+  };
+  public static SINC: ActivationFunction = {
+    output: x => x < 0.000001 ? 1 : (Math as any).sin(x) / x,
+    der: x => (x * x) < 0.000001 ? 0 : (x * (Math as any).cos(x) - (Math as any).sin(x)) / (x * x),
+    compileToPy: (input: string) => `np.sinc(${input})`
+  };
+  public static MISH: ActivationFunction = {
+    output: x => x * Activations.TANH.output((Math as any).softplus(x)),
+    der: x => {
+      let sig_x = Activations.SIGMOID.output(x);
+      let tanh_sp_x = Activations.TANH.output((Math as any).softplus(x));
+      return tanh_sp_x * x * sig_x * (1 - tanh_sp_x * tanh_sp_x);
+    },
+    compileToPy: (input: string) => `mish(${input})`
   };
 }
 
@@ -275,9 +298,9 @@ export class Link {
  * @param inputIds List of ids for the input nodes.
  */
 export function buildNetwork(
-    networkShape: number[], activation: ActivationFunction,
-    outputActivation: ActivationFunction,
-    inputIds: string[], initZero?: boolean): Node[][] {
+  networkShape: number[], activation: ActivationFunction,
+  outputActivation: ActivationFunction,
+  inputIds: string[], initZero?: boolean): Node[][] {
   let numLayers = networkShape.length;
   let id = 1;
   /** List of layers, with each layer being a list of nodes. */
@@ -296,7 +319,7 @@ export function buildNetwork(
         id++;
       }
       let node = new Node(nodeId,
-          isOutputLayer ? outputActivation : activation, initZero);
+        isOutputLayer ? outputActivation : activation, initZero);
       currentLayer.push(node);
       if (layerIdx >= 1) {
         // Add links from nodes in the previous layer to this node.
@@ -326,7 +349,7 @@ export function forwardProp(network: Node[][], inputs: number[]): number {
   let inputLayer = network[0];
   if (inputs.length !== inputLayer.length) {
     throw new Error("The number of inputs must match the number of nodes in" +
-        " the input layer");
+      " the input layer");
   }
   // Update the input layer.
   for (let i = 0; i < inputLayer.length; i++) {
@@ -352,7 +375,7 @@ export function forwardProp(network: Node[][], inputs: number[]): number {
  * in the network.
  */
 export function backProp(network: Node[][], target: number,
-    errorFunc: ErrorFunction): void {
+  errorFunc: ErrorFunction): void {
   // The output node is a special case. We use the user-defined error
   // function for the derivative.
   let outputNode = network[network.length - 1][0];
@@ -405,7 +428,7 @@ export function backProp(network: Node[][], target: number,
  * derivatives.
  */
 export function updateWeights(network: Node[][], learningRate: number,
-    regularization: RegularizationFunction, regularizationRate: number) {
+  regularization: RegularizationFunction, regularizationRate: number) {
   for (let layerIdx = 1; layerIdx < network.length; layerIdx++) {
     let currentLayer = network[layerIdx];
     for (let i = 0; i < currentLayer.length; i++) {
@@ -423,16 +446,16 @@ export function updateWeights(network: Node[][], learningRate: number,
           continue;
         }
         let regulDer = regularization ?
-            regularization.der(link.weight) : 0;
+          regularization.der(link.weight) : 0;
         if (link.numAccumulatedDers > 0) {
           // Update the weight based on dE/dw.
           link.weight = link.weight -
-              (learningRate / link.numAccumulatedDers) * link.accErrorDer;
+            (learningRate / link.numAccumulatedDers) * link.accErrorDer;
           // Further update the weight based on regularization.
           let newLinkWeight = link.weight -
-              (learningRate * regularizationRate) * regulDer;
+            (learningRate * regularizationRate) * regulDer;
           if (regularization === RegularizationFunction.L1 &&
-              link.weight * newLinkWeight < 0) {
+            link.weight * newLinkWeight < 0) {
             // The weight crossed 0 due to the regularization term. Set it to 0.
             link.weight = 0;
             link.isDead = true;
@@ -449,10 +472,10 @@ export function updateWeights(network: Node[][], learningRate: number,
 
 /** Iterates over every node in the network/ */
 export function forEachNode(network: Node[][], ignoreInputs: boolean,
-    accessor: (node: Node) => any) {
+  accessor: (node: Node) => any) {
   for (let layerIdx = ignoreInputs ? 1 : 0;
-      layerIdx < network.length;
-      layerIdx++) {
+    layerIdx < network.length;
+    layerIdx++) {
     let currentLayer = network[layerIdx];
     for (let i = 0; i < currentLayer.length; i++) {
       let node = currentLayer[i];

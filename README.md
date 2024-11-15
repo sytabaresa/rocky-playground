@@ -13,7 +13,7 @@ and also incorporates code from [David Cato's fork](https://github.com/dcato98/p
 Some examples of what has changed:
 
 - Real-world datasets related to geological tasks.
-- New activation functions including ELU, Leaky ReLU, and Swish.
+- New activation functions including ELU, Leaky ReLU, sin, sinc, mish and Swish.
 - Some new synthetic datasets: moons and linear (from `matplotlib`), and diagonal (to illustrate overfitting).
 - You can change regularization on the fly.
 - You can upload your own datasets.
