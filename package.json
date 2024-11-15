@@ -40,7 +40,8 @@
     "tsify": "^4.0.0",
     "typescript": "^2.9",
     "uglify-js": "^3.4.10",
-    "watchify": "^4.0.0"
+    "watchify": "^4.0.0",
+    "browserify": "^17.0.1"
   },
   "dependencies": {
     "browserify": "^17.0.1",
